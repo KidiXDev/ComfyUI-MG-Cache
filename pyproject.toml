@@ -3,6 +3,7 @@ name = "comfyui-mg-cache"
 version = "0.1.0"
 description = "MG-Cache multi-granularity caching nodes for DiT models in ComfyUI"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = []
 
