@@ -28,11 +28,11 @@ class MGCacheNode(io.ComfyNode):
                 ),
                 io.Float.Input(
                     "beta",
-                    default=0.3,
+                    default=0.0,
                     min=0.0,
                     max=10.0,
                     step=0.01,
-                    tooltip="Layer budget. A block is reused while its accumulated input drift stays below it. 0 disables layer caching.",
+                    tooltip="Layer budget. A block is reused while its accumulated input drift stays below it. 0 disables layer caching. Without a calibration it degrades MOSS Image at any tested value.",
                 ),
                 io.Combo.Input(
                     "calibration",
