@@ -51,7 +51,7 @@ class MGCacheNode(io.ComfyNode):
 
     @classmethod
     def execute(cls, model, alpha, beta, calibration, forecast) -> io.NodeOutput:
-        return io.NodeOutput(attach(model, MGCache(alpha, beta, load_calibration(calibration), forecast)))
+        return io.NodeOutput(attach(model, MGCache(alpha, beta, load_calibration(calibration), forecast), beta > 0))
 
 
 class MGCacheCalibrateNode(io.ComfyNode):
@@ -78,7 +78,7 @@ class MGCacheCalibrateNode(io.ComfyNode):
 
     @classmethod
     def execute(cls, model, name, importance_stride) -> io.NodeOutput:
-        return io.NodeOutput(attach(model, MGCalibration(calibration_path(name), importance_stride)))
+        return io.NodeOutput(attach(model, MGCalibration(calibration_path(name), importance_stride), importance_stride > 0))
 
 
 class MGCacheExtension(ComfyExtension):

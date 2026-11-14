@@ -86,6 +86,15 @@ def test_forecast_extrapolates_linearly():
     assert torch.equal(sample(patcher), sample(attach(patcher, MGCache(0.0, 0.0, None, True))))
 
 
+def test_timestep_cache_alone_leaves_blocks_unhooked():
+    patcher = build_patcher()
+    cache = MGCache(2.0, 0.0, None)
+    cached = sample(attach(patcher, cache, replace_blocks=False))
+    assert cache.counts["skipped_steps"] > 0
+    assert cache.counts["blocks"] == 0
+    assert torch.isfinite(cached).all()
+
+
 def test_calibration_round_trip():
     with tempfile.TemporaryDirectory() as directory:
         calibration_module.CALIBRATION_DIR = directory
@@ -120,5 +129,6 @@ if __name__ == "__main__":
     test_zero_budgets_are_lossless()
     test_budgets_skip_steps_and_blocks()
     test_forecast_extrapolates_linearly()
+    test_timestep_cache_alone_leaves_blocks_unhooked()
     test_calibration_round_trip()
     sys.stdout.write("ok\n")
