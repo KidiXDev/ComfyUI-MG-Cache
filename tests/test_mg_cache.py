@@ -13,7 +13,7 @@ import comfy.patcher_extension  # noqa: E402
 from comfy.ldm.moss_image.model import MOSSImage  # noqa: E402
 
 from src import calibration as calibration_module  # noqa: E402
-from src.cache import MGCache  # noqa: E402
+from src.cache import BranchState, MGCache  # noqa: E402
 from src.calibration import MGCalibration, load_calibration  # noqa: E402
 from src.patching import attach  # noqa: E402
 
@@ -75,6 +75,17 @@ def test_budgets_skip_steps_and_blocks():
     assert not torch.equal(reference, cached)
 
 
+def test_forecast_extrapolates_linearly():
+    state = BranchState()
+    first, second = torch.full((1, 2, 2, 2), 3.0), torch.full((1, 2, 2, 2), 2.0)
+    state.history = [(1.0, first), (0.8, second)]
+    state.output = second
+    assert torch.allclose(MGCache(1.0, 0.0, None, True).reuse_output(state, 0.6), torch.full((1, 2, 2, 2), 1.0))
+    assert torch.equal(MGCache(1.0, 0.0, None, False).reuse_output(state, 0.6), second)
+    patcher = build_patcher()
+    assert torch.equal(sample(patcher), sample(attach(patcher, MGCache(0.0, 0.0, None, True))))
+
+
 def test_calibration_round_trip():
     with tempfile.TemporaryDirectory() as directory:
         calibration_module.CALIBRATION_DIR = directory
@@ -108,5 +119,6 @@ def test_calibration_round_trip():
 if __name__ == "__main__":
     test_zero_budgets_are_lossless()
     test_budgets_skip_steps_and_blocks()
+    test_forecast_extrapolates_linearly()
     test_calibration_round_trip()
     sys.stdout.write("ok\n")

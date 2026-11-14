@@ -40,13 +40,18 @@ class MGCacheNode(io.ComfyNode):
                     default=NO_CALIBRATION,
                     tooltip="File written by MG-Cache Calibrate. Without one the drift is estimated online and every block has equal importance.",
                 ),
+                io.Boolean.Input(
+                    "forecast",
+                    default=False,
+                    tooltip="On a skipped model call, extrapolate the output from the last two computed ones instead of repeating the last one.",
+                ),
             ],
             outputs=[io.Model.Output()],
         )
 
     @classmethod
-    def execute(cls, model, alpha, beta, calibration) -> io.NodeOutput:
-        return io.NodeOutput(attach(model, MGCache(alpha, beta, load_calibration(calibration))))
+    def execute(cls, model, alpha, beta, calibration, forecast) -> io.NodeOutput:
+        return io.NodeOutput(attach(model, MGCache(alpha, beta, load_calibration(calibration), forecast)))
 
 
 class MGCacheCalibrateNode(io.ComfyNode):

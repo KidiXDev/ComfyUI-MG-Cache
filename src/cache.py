@@ -31,13 +31,15 @@ class BranchState:
         self.aligned = True
         self.ordinal = 0
         self.layers = {}
+        self.history = []
 
 
 class MGCache:
-    def __init__(self, alpha, beta, calibration):
+    def __init__(self, alpha, beta, calibration, forecast=False):
         self.alpha = alpha
         self.beta = beta
         self.calibration = calibration
+        self.forecast = forecast
         self.states = {}
         self.counts = {"steps": 0, "skipped_steps": 0, "blocks": 0, "reused_blocks": 0}
 
@@ -67,7 +69,13 @@ class MGCache:
         state.aligned = state.aligned and abs(sigmas[state.step] - sigma) < 1e-4
         return math.inf if state.anchor is None else drift[state.step] - drift[state.anchor]
 
-    def reuse_output(self, state):
+    def forecast_output(self, state, sigma):
+        (previous_sigma, previous), (last_sigma, last) = state.history
+        return torch.lerp(previous, last, (sigma - previous_sigma) / (last_sigma - previous_sigma))
+
+    def reuse_output(self, state, sigma):
+        if self.forecast and len(state.history) == 2 and state.history[0][0] != state.history[1][0]:
+            return self.forecast_output(state, sigma)
         regression_applies = (
             self.calibration is not None
             and state.aligned
@@ -87,12 +95,13 @@ class MGCache:
         state = self.states.get(key)
         if state is None or state.input.shape != x.shape:
             state = self.states[key] = BranchState()
-        risk = self.timestep_risk(state, x, current_sigma(transformer_options))
+        sigma = current_sigma(transformer_options)
+        risk = self.timestep_risk(state, x, sigma)
         state.input = x
         self.counts["steps"] += 1
         if state.output is not None and risk <= self.alpha:
             self.counts["skipped_steps"] += 1
-            return self.reuse_output(state)
+            return self.reuse_output(state, sigma)
         state.ordinal = 0
         output = executor(x, timestep, context, {**transformer_options, WRAPPER_KEY: state}, **kwargs)
         if self.calibration is None and state.output is not None and state.input_drift > 0:
@@ -100,6 +109,7 @@ class MGCache:
         state.input_drift = 0.0
         state.anchor = state.output_step = state.step
         state.output = output
+        state.history = [*state.history[-1:], (sigma, output)]
         return output
 
     # Layer cache
